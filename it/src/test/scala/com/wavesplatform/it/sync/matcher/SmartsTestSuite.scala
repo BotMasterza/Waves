@@ -14,31 +14,36 @@ import org.scalatest._
 
 class SmartsTestSuite extends MatcherSuiteBase with GivenWhenThen {
 
-  import SmartsTestSuite._
-  override protected def nodeConfigs: Seq[Config] = Configs.map(configWithPreActivatedFeatures().withFallback(_))
+  import BlacklistedTradingTestSuite._
+  override protected def nodeConfigs: Seq[Config] = Configs.map(configWithBlacklisted().withFallback(_))
 
-  matcherNode.waitForTransaction(matcherNode.signedIssue(createSignedIssueRequest(IssueUsdTx)).id)
+  private def matcher = dockerNodes().head
+  private def alice   = dockerNodes()(1)
+  private def bob     = dockerNodes()(2)
+
+  matcher.waitForTransaction(matcher.signedIssue(createSignedIssueRequest(IssueUsdTx)).id)
 
   val (amount, price) = (1000000000L, 1000L)
 
   "test" in {
-    val usdBuyOrder = matcherNode.placeOrder(aliceNode.privateKey, wavesUsdPair, BUY, amount, price, matcherFee, version = 1)
-    matcherNode.waitOrderStatus(wavesUsdPair, usdBuyOrder.message.id, "Accepted")
+    val usdBuyOrder = matcher.placeOrder(alice.privateKey, wavesUsdPair, BUY, amount, price, matcherFee, version = 1)
+    matcher.waitOrderStatus(wavesUsdPair, usdBuyOrder.message.id, "Accepted")
 
-    val usdSellOrder = matcherNode.placeOrder(bobNode.privateKey, wavesUsdPair, SELL, amount, price, matcherFee, version = 2)
+    val usdSellOrder = matcher.placeOrder(bob.privateKey, wavesUsdPair, SELL, amount, price, matcherFee, version = 2)
     usdSellOrder.status shouldBe "OrderAccepted"
-    matcherNode.waitOrderStatus(wavesUsdPair, usdSellOrder.message.id, "Filled")
+    Thread.sleep(60000)
+    matcher.orderStatus(usdSellOrder.message.id, wavesUsdPair).status shouldBe "Filled"
 //    assertBadRequestAndMessage(matcher.placeOrder(bob.privateKey, wavesUsdPair, SELL, dec8, dec2, matcherFee, version = 1),
 //                               "Trading on scripted account isn't allowed yet")
 
-    matcherNode.waitOrderInBlockchain(usdSellOrder.message.id)
+    matcher.waitOrderInBlockchain(usdSellOrder.message.id)
 
-//    info(s"matcherHeight: ${matcherNode.height}, aliceHeight: ${aliceNode.height}")
-//    info(s"mB: ${matcherNode.blockSeq(1, matcherNode.height)}")
-//    info(s"aB: ${aliceNode.blockSeq(1, aliceNode.height)}")
-//
-//    val txInfo = aliceNode.waitOrderInBlockchain(usdSellOrder.message.id)
-//    info(s"${aliceNode.height}: $txInfo")
+    info(s"matcherHeight: ${matcher.height}, aliceHeight: ${alice.height}")
+    info(s"mB: ${matcher.blockSeq(1, matcher.height)}")
+    info(s"aB: ${alice.blockSeq(1, alice.height)}")
+
+    val txInfo = alice.waitOrderInBlockchain(usdSellOrder.message.id)
+    info(s"${alice.height}: $txInfo")
   }
 
 }
