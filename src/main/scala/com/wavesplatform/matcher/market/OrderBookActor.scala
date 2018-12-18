@@ -32,12 +32,13 @@ class OrderBookActor(owner: ActorRef,
                      createTransaction: CreateTransaction,
                      time: Time)
     extends PersistentActor
+    with SnapshotterExt
     with ScorexLogging {
 
   override def persistenceId: String = OrderBookActor.name(assetPair)
 
-  private var lastSnapshotNr: Option[Long] = Some(-1L)
-  private var lastProcessedOffset: Long    = -1L
+  private var savingSnapshot: Boolean   = false
+  private var lastProcessedOffset: Long = -1L
 
   private val matchTimer = Kamon.timer("matcher.orderbook.match").refine("pair" -> assetPair.toString)
   private var orderBook  = OrderBook.empty
@@ -77,17 +78,18 @@ class OrderBookActor(owner: ActorRef,
 
   private def snapshotsCommands: Receive = {
     case SaveSnapshotSuccess(metadata) =>
-      log.info(s"Snapshot has been saved: $metadata")
-      owner ! OrderBookSnapshotUpdated(assetPair, lastProcessedOffset)
+      savingSnapshot = false
+      log.info(s"Snapshot has been saved at offset $lastProcessedOffset: $metadata")
+      owner ! OrderBookSnapshotUpdated(assetPair, metadata.sequenceNr)
       deleteSnapshots(SnapshotSelectionCriteria.Latest.copy(maxSequenceNr = metadata.sequenceNr - 1))
 
     case SaveSnapshotFailure(metadata, reason) =>
-      lastSnapshotNr = None
+      savingSnapshot = false
       log.error(s"Failed to save snapshot: $metadata", reason)
 
     case SaveSnapshot =>
-      if (lastSnapshotNr.forall(_ < lastProcessedOffset)) {
-        lastSnapshotNr = Some(lastProcessedOffset)
+      if (!savingSnapshot) {
+        savingSnapshot = true
         saveSnapshot()
       }
   }
@@ -265,7 +267,7 @@ class OrderBookActor(owner: ActorRef,
     super.preRestart(reason, message)
   }
 
-  private def saveSnapshot(): Unit = saveSnapshot(Snapshot(lastProcessedOffset, orderBook))
+  private def saveSnapshot(): Unit = saveSnapshot(persistenceId, lastProcessedOffset, Snapshot(lastProcessedOffset, orderBook))
 }
 
 object OrderBookActor {
