@@ -8,14 +8,13 @@ import com.wavesplatform.it.api.SyncMatcherHttpApi._
 import com.wavesplatform.it.matcher.MatcherSuiteBase
 import com.wavesplatform.it.sync._
 import com.wavesplatform.it.sync.matcher.config.MatcherPriceAssetConfig._
-import com.wavesplatform.it.util._
 import com.wavesplatform.transaction.assets.exchange.OrderType._
 import org.scalatest._
 
 class SmartsTestSuite extends MatcherSuiteBase with GivenWhenThen {
 
-  import BlacklistedTradingTestSuite._
-  override protected def nodeConfigs: Seq[Config] = Configs.map(configWithBlacklisted().withFallback(_))
+  import SmartsTestSuite._
+  override protected def nodeConfigs: Seq[Config] = Configs.map(configWithPreActivatedFeatures().withFallback(_))
 
   private def matcher = dockerNodes().head
   private def alice   = dockerNodes()(1)
