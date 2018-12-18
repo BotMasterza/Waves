@@ -34,9 +34,6 @@ class SponsorshipForContactsSuite extends BaseTransactionSuite with CancelAfterF
     sender.accountBalances(secondAddress)._1 shouldBe secondAddressBalance - transferAmount
     sender.assetBalance(firstAddress, assetId).balance shouldBe firstAddressAssetBalance + 100
     sender.assetBalance(secondAddress, assetId).balance shouldBe secondAddressAssetBalance - 100
-
-    sender.transfer(firstAddress, secondAddress, transferAmount, 100, None, Some(assetId), 2, waitForTx = true)
-
   }
 
 }

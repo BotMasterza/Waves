@@ -1,4 +1,4 @@
-package com.wavesplatform.it.sync.matcherNode
+package com.wavesplatform.it.sync.matcher
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory.parseString
@@ -8,7 +8,6 @@ import com.wavesplatform.it.api.SyncMatcherHttpApi._
 import com.wavesplatform.it.matcher.MatcherSuiteBase
 import com.wavesplatform.it.sync._
 import com.wavesplatform.it.sync.matcher.config.MatcherPriceAssetConfig._
-import com.wavesplatform.it.util._
 import com.wavesplatform.transaction.assets.exchange.OrderType._
 import org.scalatest._
 
@@ -32,14 +31,9 @@ class SmartsTestSuite extends MatcherSuiteBase with GivenWhenThen {
 //    assertBadRequestAndMessage(matcherNode.placeOrder(bobNode.privateKey, wavesUsdPair, SELL, dec8, dec2, matcherNodeFee, version = 1),
 //                               "Trading on scripted account isn't allowed yet")
 
-    matcherNode.waitOrderInBlockchain(usdSellOrder.message.id)
+    val tx = matcherNode.waitOrderInBlockchain(usdSellOrder.message.id).head
 
-//    info(s"matcherNodeHeight: ${matcherNode.height}, aliceNodeHeight: ${aliceNode.height}")
-//    info(s"mB: ${matcherNode.blockSeq(1, matcherNode.height)}")
-//    info(s"aB: ${aliceNode.blockSeq(1, aliceNode.height)}")
-//
-    val txInfo = aliceNode.waitOrderInBlockchain(usdSellOrder.message.id)
-//    info(s"${aliceNode.height}: $txInfo")
+    aliceNode.waitForTransaction(tx.id)
   }
 
 }
